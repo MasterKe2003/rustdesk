@@ -4,7 +4,7 @@ use hbb_common::{
     allow_err,
     bytes::Bytes,
     config::{
-        self, keys::*, option2bool, Config, LocalConfig, PeerConfig, CONNECT_TIMEOUT,
+        self, keys::*, Config, LocalConfig, PeerConfig, CONNECT_TIMEOUT,
         RENDEZVOUS_PORT,
     },
     directories_next,
@@ -208,7 +208,7 @@ pub fn use_texture_render() -> bool {
 
 #[inline]
 pub fn get_local_option(key: String) -> String {
-    LocalConfig::get_option(&key)
+    crate::get_local_option(&key)
 }
 
 #[inline]
@@ -429,7 +429,10 @@ pub fn set_option(key: String, value: String) {
         ipc::set_options(options.clone()).ok();
     }
     #[cfg(any(target_os = "android", target_os = "ios"))]
-    Config::set_option(key, value);
+    {
+        let _nat = crate::CheckTestNatType::new();
+        Config::set_option(key, value);
+    }
 }
 
 #[inline]
@@ -479,12 +482,12 @@ pub fn set_socks(proxy: String, username: String, password: String) {
     ipc::set_socks(socks).ok();
     #[cfg(target_os = "android")]
     {
+        let _nat = crate::CheckTestNatType::new();
         if socks.proxy.is_empty() {
             Config::set_socks(None);
         } else {
             Config::set_socks(Some(socks));
         }
-        crate::common::test_nat_type();
         crate::RendezvousMediator::restart();
         log::info!("socks updated");
     }
@@ -1182,7 +1185,7 @@ async fn check_connect_status_(reconnect: bool, rx: mpsc::UnboundedReceiver<ipc:
                                 {
                                     let b = OPTIONS.lock().unwrap().get(OPTION_ENABLE_FILE_TRANSFER).map(|x| x.to_string()).unwrap_or_default();
                                     if b != enable_file_transfer {
-                                        clipboard::ContextSend::enable(option2bool(OPTION_ENABLE_FILE_TRANSFER, &b));
+                                        clipboard::ContextSend::enable(config::option2bool(OPTION_ENABLE_FILE_TRANSFER, &b));
                                         enable_file_transfer = b;
                                     }
                                 }
